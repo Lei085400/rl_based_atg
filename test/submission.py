@@ -10,7 +10,7 @@ class Submission:
     def __init__(self, output_file: str):
         """You need to specify the following arguments."""
         self.output_file = output_file
-        self.base_url = "http://101.200.56.238"  # The base url of the model server
+        self.base_url = "http://8.147.110.102"  # The base url of the model server
         self.port = 11451
         self.timeout = 5.0
         self.all_time_limit = 300.0
