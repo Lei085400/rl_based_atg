@@ -1,6 +1,7 @@
 import threading
 import time
 import json
+import os
 
 axioms = [] # 引理文件
 symbols = [] # 符号文件
@@ -14,8 +15,9 @@ class EcnuThread(threading.Thread):
         # self.counter = counter
 
     def run(self):  # 把要执行的代码写到run函数里面, 线程在创建后会直接运行run函数
-        file_path = "output_test.jsonl"
-        with open(file_path, 'r') as file:
+        file_path = "/home/ssm/Metamath/icml-deploy/data"
+        file_name = "theorems/theorem00_13.jsonl"
+        with open(os.path.join(file_path, file_name), 'r') as file:
             for _line in file.readlines():
                 outputs.append(json.loads(_line))
                 time.sleep(0.02)

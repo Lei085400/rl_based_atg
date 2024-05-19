@@ -6,10 +6,10 @@ import json
 
 from submission import *
 
-submission = Submission("D:\PyCharmFile\ReinLearning\ActorCrital\output.jsonl")
-axioms_path = "axioms.jsonl"
-symbols_path = "symbols.jsonl"
-submission.base_url = "http://101.200.56.238"
+submission = Submission("/home/ssm/Metamath/icml-deploy/outputs/output.jsonl")
+axioms_path = "../data/axioms.jsonl"
+symbols_path = "../data/symbols.jsonl"
+submission.base_url = "http://127.0.0.1"
 submission.port = 11451
 submission.run(axioms_path, symbols_path)
 
