@@ -220,11 +220,11 @@ class Translator:
         with open(log_filename, 'r') as f:
             stmt = f.readlines()[-1]
 
-        try:
-            os.system(f"rm -rf {filename}")
-            os.system(f"rm -rf {log_filename}")
-        except Exception as e:
-            e.with_traceback()
+        # try:
+        #     os.system(f"rm -rf {filename}")
+        #     os.system(f"rm -rf {log_filename}")
+        # except Exception as e:
+        #     e.with_traceback()
 
         return stmt == "No errors were found.\n"
 
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     translator.load(path + symbols_filename)
     translator.load(path + axioms_filename)
     translator.load(path + theorem_filenames[0])
-    translator.load(path + theorem_filenames[1])
+    # translator.load(path + theorem_filenames[1])
     
     print(translator.verify())
   

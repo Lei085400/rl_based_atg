@@ -45,3 +45,6 @@ wjsi $f wff jsi $.
 wjrh $f wff jrh $.
 wjmu $f wff jmu $.
 wjla $f wff jla $.
+
+vx.wal $f setvar x $.
+vx.cv $f setvar x $.
