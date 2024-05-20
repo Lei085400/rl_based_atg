@@ -198,7 +198,7 @@
     ]
   },
   {
-    "theorem": "wl-impchain-mp-0",
+    "theorem": "theorem0",
     "type": "$p",
     "conclusion": "|- ph",
     "d_vars": "",
@@ -210,13 +210,13 @@
       "|- ps",
       "|- ( ps -> ph )"
     ],
-    "proof_steps": "wps wph wl-impchain-mp-0.1 wl-impchain-mp-0.2 ax-mp",
+    "proof_steps": "wps wph theorem0.1 theorem0.2 ax-mp",
     "references": [
       "ax-mp"
     ]
   },
   {
-    "theorem": "e0a",
+    "theorem": "theorem1",
     "type": "$p",
     "conclusion": "|- ps",
     "d_vars": "",
@@ -228,7 +228,7 @@
       "|- ph",
       "|- ( ph -> ps )"
     ],
-    "proof_steps": "wph wps e0a.1 e0a.2 ax-mp",
+    "proof_steps": "wph wps theorem1.1 theorem1.2 ax-mp",
     "references": [
       "ax-mp"
     ]

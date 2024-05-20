@@ -15,9 +15,10 @@ class EcnuThread(threading.Thread):
         # self.counter = counter
 
     def run(self):  # 把要执行的代码写到run函数里面, 线程在创建后会直接运行run函数
-        file_path = "/home/ssm/Metamath/icml-deploy/data"
-        file_name = "theorems/theorem00_13.jsonl"
+        file_path = "/root/icml-deploy/data"
+        file_name = "theorems/theorem00_13.json"
         with open(os.path.join(file_path, file_name), 'r') as file:
-            for _line in file.readlines():
-                outputs.append(json.loads(_line))
-                time.sleep(0.02)
+            for json_item in json.load(file):
+                if json_item["theorem"] not in {"theorem0", "theorem1"}:
+                    continue
+                outputs.append(json_item)
