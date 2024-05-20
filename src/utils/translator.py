@@ -10,9 +10,15 @@ class Translator:
                         '$f':{}}
     
     def load(self, filename):
-        with open(filename, 'r') as f:
-            self.translations.extend(json.load(f))
+        if filename.endswith('.json'):
+            with open(filename, 'r') as f:
+                self.translations.extend(json.load(f))
+        elif filename.endswith('.jsonl'):
+            with open(filename, 'r') as f:
+                for line in f:
+                    self.translations.append(json.loads(line))
 
+        
     def _dump(self, s, w):
         s.extend(w)
         s.append('\n')
@@ -220,20 +226,20 @@ class Translator:
         with open(log_filename, 'r') as f:
             stmt = f.readlines()[-1]
 
-        # try:
-        #     os.system(f"rm -rf {filename}")
-        #     os.system(f"rm -rf {log_filename}")
-        # except Exception as e:
-        #     e.with_traceback()
+        try:
+            os.system(f"rm -rf {filename}")
+            os.system(f"rm -rf {log_filename}")
+        except Exception as e:
+            e.with_traceback()
 
         return stmt == "No errors were found.\n"
 
     
 if __name__ == "__main__":
     path = '../../data/'
-    symbols_filename = 'symbols.json'
-    axioms_filename = 'axioms.json'
-    theorem_filenames = ['theorems/theorem00_13.json', 'theorems/theorem01_15.json']
+    symbols_filename = 'symbols.jsonl'
+    axioms_filename = 'axioms.jsonl'
+    theorem_filenames = ['theorems/theorem00_13.json']
     
 
     translator = Translator()
