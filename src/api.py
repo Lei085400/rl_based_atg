@@ -1,10 +1,8 @@
 import json
 from fastapi import FastAPI, Request
-from EcnuThread import EcnuThread, axioms, symbols, outputs
-from loguru import logger
+from EcnuThread import *
 
-logger.remove()
-logger.add("../logs/{time}.log")
+
 
 app = FastAPI() # 部署的对象
 

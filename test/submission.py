@@ -13,7 +13,7 @@ class Submission:
         self.base_url = "http://8.147.108.27"  # The base url of the model server
         self.port = 11451
         self.timeout = 5.0
-        self.all_time_limit = 300.0
+        self.all_time_limit = 500.0
         self.ask_time_gap = 5.0
 
 

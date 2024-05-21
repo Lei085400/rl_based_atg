@@ -198,25 +198,25 @@
     ]
   },
   {
-    "theorem": "theorem0",
+    "theorem": "wl-impchain-mp-0",   
     "type": "$p",
     "conclusion": "|- ph",
     "d_vars": "",
     "f_hypos": [
-      "wff ph",
-      "wff ps"
+      "wff ps",
+      "wff ph"
     ],
     "e_hypos": [
       "|- ps",
       "|- ( ps -> ph )"
     ],
-    "proof_steps": "wps wph theorem0.1 theorem0.2 ax-mp",
+    "proof_steps": "wps wph wl-impchain-mp-0.1 wl-impchain-mp-0.2 ax-mp",
     "references": [
       "ax-mp"
     ]
   },
   {
-    "theorem": "theorem1",
+    "theorem": "e0a",
     "type": "$p",
     "conclusion": "|- ps",
     "d_vars": "",
@@ -228,7 +228,7 @@
       "|- ph",
       "|- ( ph -> ps )"
     ],
-    "proof_steps": "wph wps theorem1.1 theorem1.2 ax-mp",
+    "proof_steps": "wph wps eoa.1 eoa.2 ax-mp",
     "references": [
       "ax-mp"
     ]
