@@ -9,8 +9,7 @@ from model import policy_model
 from model import value_model
 from mcts import Node
 from mcts import MCTS
-# from verify import anatomy
-import openai
+from verify import anatomy
 from tqdm import tqdm
 
 from loguru import logger
@@ -29,26 +28,16 @@ class EcnuThread(threading.Thread):
         # self.counter = counter
 
     def run(self):  # 把要执行的代码写到run函数里面, 线程在创建后会直接运行run函数
-        file_path = "/root/icml-deploy/data"
-        file_name = "theorems/theorem00_13.json"
-        with open(os.path.join(file_path, file_name), 'r') as file:
-            for json_item in json.load(file):
-                if json_item["theorem"] in {"weq", "wl-impchain-mp-0", "e0a"}:
-                    continue
-                outputs.append(json_item)
-                
-        file_name = "theorem01_15.json"
-        with open(os.path.join(file_path, file_name), 'r') as file:
-            for json_item in json.load(file):
-                if json_item["theorem"] in {"eel0cT", "H15NH16TH15IH16", "sptruw"}:
-                    continue
-                outputs.append(json_item)
-        
-        
-        return
-        
-        axiom_file = "/root/icml-deploy/data/axioms.jsonl"   
-        symbol_file = "/root/icml-deploy/data/symbols.jsonl"
+
+
+        # outputs.extend(json.load(fp=open("../data/answer.json")))
+        # for i, x in enumerate(outputs):
+        #     outputs[i]["theorem"] = "theorem-" + str(i)
+
+        # return
+                      
+        axiom_file = "../data/temp_axioms.jsonl"   
+        symbol_file = "../data/temp_symbols.jsonl"
         
         device = torch.device('cpu') 
 
@@ -77,7 +66,7 @@ class EcnuThread(threading.Thread):
         checkpoint_value = torch.load("value_model")
         valueModel.load_state_dict(checkpoint_value['state_dict'])
 
-        # anatomy(axiom_file,symbol_file)
+        anatomy(axiom_file,symbol_file)
         verbosity = 30
 
         filename='Declare.mm'

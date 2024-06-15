@@ -41,70 +41,85 @@ def encode_tactic(tactic,feature_size):
     return encode_tactic
 
 
+def cosine_similarity(vector1, vector2):
+    # 计算向量的内积
+    dot_product = np.dot(vector1, vector2)
+    
+    # 计算向量的长度
+    norm_vector1 = np.linalg.norm(vector1)
+    norm_vector2 = np.linalg.norm(vector2)
+    
+    # 计算余弦相似度
+    if norm_vector1 != 0 and norm_vector2 != 0:
+        cosine_sim = dot_product / (norm_vector1 * norm_vector2)
+    else:
+        cosine_sim = 0  # 避免除零错误
+    
+    return cosine_sim
+
+
 def tactic_generator(axiom_file,symbol_file):
-  # tactic_candidates = ['wp',
-  #                      'wr',
-  #                      'ws',
-  #                      'wq',
-  #                      'w2',
-  #                      ]
+
   tactic_candidates = []
-  
   with open(symbol_file, 'r') as f:
     for line in f:
         # 解析 JSON 对象并添加到列表中
         json_data = json.loads(line)
         tactic_candidates.append(json_data["theorem"])
-        
+  
+  count = 0
   with open(axiom_file, 'r') as f:
     for line in f:
+      # if(count <= 21):
+        count += 1
         # 解析 JSON 对象并添加到列表中
         json_data = json.loads(line)
         tactic_candidates.append(json_data["theorem"])  
   # print("___")
   # print(tactic_candidates)
+  
+  tac_list = ["vx.cv","vx.tru","ax-2","ax-3","df-bi","df-an","df-ifp","w3o","df-3or","df-an","df-3an","df-nan","cv","wceq","wtru","df-tru","wfal","df-fal","df-had","df-cad"]
 
-  tac1 = "vx.cv"
-  tac2 = "vx.tru"
-  if tac1 in tactic_candidates:
-    tactic_candidates.remove(tac1)
-  if tac2 in tactic_candidates:
-    tactic_candidates.remove(tac2)
+  for tac in tac_list:
+    if tac in tactic_candidates:
+      tactic_candidates.remove(tac)
+      
   return tactic_candidates
 
 ##############和mm交互：
 Assertion = type[tuple[set[tuple[str, str]], list[tuple[str, str]], list[list[str]], list[str]]]
 
-def read_axioms_json( file_name = 'axioms.json' #文件路径
-                     ) -> tuple[list[Assertion],list[str]]:
-  """读比赛给的axioms.json文件, 返回转换得到的assersion数组"""
+def read_axioms_json(
+        file_name = '../data/temp_axioms.jsonl'    #文件路径
+        ) -> tuple[list[Assertion],list[str]]:
+        """读比赛给的axioms.json文件, 返回转换得到的assersion数组"""
+        assertions = [[]]
+        assertion = []
+        assertion_labels = []
+        # 读取JSON文件
+        with open(file_name, 'r', encoding='utf-8') as file:
+            data = file.readlines()
+        # 解析JSON数据并存储为Python对象的列表
+        known_axioms = [json.loads(line.strip()) for line in data]
+        for axiom in known_axioms:
+            # print(axiom['theorem'])
+            e_hyps = axiom['e_hypos']
+            f_hyps = axiom['f_hypos']
+            # f_hyps = [(item.split()[0], item.split()[1]) for item in axiom['f_hypos']]
+            label = axiom['theorem']
+            dvs = set(axiom['d_vars'])
+            conclusion = axiom['conclusion'].split(' ')
+            proof_steps = axiom['proof_steps']
+            assertion = dvs, f_hyps, e_hyps,conclusion
+            # print('get assersion:',label,'  ',assertion)
+            assertions.append(assertion)
+            assertion_labels.append(label)
 
-  assertions = [[]]
-  assertion = []
-  assertion_labels = []
-  # 读取JSON文件
-  with open(file_name, 'r', encoding='utf-8') as file:
-    data = file.readlines()
-  # 解析JSON数据并存储为Python对象的列表
-  known_axioms = [json.loads(line.strip()) for line in data]
-  for axiom in known_axioms:
-    # print(axiom['theorem'])
-    e_hyps = axiom['e_hypos']
-    f_hyps = axiom['f_hypos']
-    label = axiom['theorem']
-    dvs = axiom['d_vars']
-    conclusion = axiom['conclusion']
-    proof_steps = axiom['proof_steps']
-    assertion = dvs, f_hyps, e_hyps,conclusion
-    # print('get assersion:',label,'  ',assertion)
-    assertions.append(assertion)
-    assertion_labels.append(label)
-
-  # print('assertions:',assertions)
-  return assertions,assertion_labels
+        # print('assertions:',assertions)
+        return assertions,assertion_labels
 
 def read_symbols_json(
-        file_name = 'symbols.json'
+        file_name = '../data/temp_symbols.jsonl'
         ) -> dict:
         """读比赛给的symbols.json文件, 返回符号字典"""
 
@@ -126,32 +141,38 @@ def read_symbols_json(
         # print(conclusions)
         return conclusions
 
-def assertion_trans_to_same_v(
+
+def assertion_proof_trans_to_same_v(
+        mm,
         assertion: Assertion,   # 新断言
+        proof: list,     # 得到当前断言的证明序列
         symbol_dict: dict  # 读文件symbols.json之后产生的符号字典
-        ) -> Assertion:
-        """将生成的新定理做相同的变量替换，并返回替换后的结果
-        （该函数只是为了方便判断是否产生了新定理，防止$v类型变量不同带来的干扰） 
-        
+        ) -> tuple[Assertion, list]:
+        """ 将生成的新定理做和当前证明步骤 做变量替换，并返回替换后的结果   
         """ 
-        symbols = ['wph','wps','wch','wth','wta','wet','wze','wsi','wrh','wmu','wla',
-                   'wka','vx.wal','vx.cv','cA.wceq','cB.wceq','vx.tru','vy.tru']
+        symbols = list(symbol_dict.keys())
         new_assertion = copy.deepcopy(assertion)
         dvs = new_assertion[0]
         f_hyps = new_assertion[1]
         e_hyps = new_assertion[2]
         new_conclusion = new_assertion[3]
+        new_proof = [] # 替换证明步骤
         i = 0
         fhs_v = [] # 存需要被替换的$v
+        labels_p = []  # 需要被替换的标签
+        label_dict = {}  # 替换标签字典
+        # 思路：应该用一个字典？对应原本assertion的label 对应的是替换后的新label
         new_f_hyps = []
         new_e_hyps = []
-
         for fh in f_hyps:
-            # print('fh:',fh)
-            fhs_v.append(fh[1])  # 需要被替换的v
-            new_f_hyps.append(symbol_dict[symbols[i]])
-            i += 1
-        # print('=-=-= fhs_v:',fhs_v,'new_f_hyps:',new_f_hyps)
+            if fh[1] not in fhs_v:
+                fhs_v.append(fh[1])  # 需要被替换的v
+                fh_stmt = str('$f'), list(fh)  #==============================
+                label_p = list(mm.labels.keys())[list(mm.labels.values()).index(fh_stmt)] 
+                labels_p.append(label_p)  # 需要被替换的证明步骤
+                label_dict[label_p] = symbol_dict[symbols[i]]
+                new_f_hyps.append(tuple(symbol_dict[symbols[i]]))
+                i += 1
         # 替换e_hyps和conclusion
         for eh in e_hyps:
             new_eh = eh
@@ -164,34 +185,67 @@ def assertion_trans_to_same_v(
                 for j, fh_v in enumerate(fhs_v):
                     if ch == fh_v:
                         new_conclusion[i] = new_f_hyps[j][1]  
+        # print('[assertion proof trans to same v]new_conclusion:',new_conclusion)
+        # if new_conclusion[0] == 'wff':
+        #      new_conclusion[0] = '|-'  ##  
+        for i,step in enumerate(proof):
+            if step in labels_p:
+                new_step = list(symbol_dict.keys())[list(symbol_dict.values()).index(label_dict[step])] 
+                new_proof.append(new_step)
+            else:
+                new_proof.append(proof[i])
 
         new_assertion = dvs,new_f_hyps,new_e_hyps,new_conclusion
-        # print('[ assertion_trans_to_same_v]:',new_assertion)
-        return new_assertion  
+        # print('[ assertion_trans_to_same_v]:',new_assertion, new_proof)
+        #  $a 类型的证明步骤中的标签不用替换，因为mcts 引用的 $a 都是已有的公理集中的标签 
+        return new_assertion,new_proof  
 
 
-def is_new_assertion(
-        assertion:Assertion,
-        assertions:list[Assertion],  # 当前已有的assertion列表
-        symbol_dict:dict    #字符替换用的符号字典（读symbols.json得到）
-        )->bool:
-        """判断所给assertion是否是新产生的, 若是新产生的, 返回 True。
-        参数assertions: 当前已有的assertion列表;
-        参数symbol_dict: 字符替换用的符号字典(读symbols.json得到
-        """
-        #为了判断是否产生新定理，把新定理的假设、结论里的变量做相应替换后再对比
-        flag = False
-        trans_assertion = assertion_trans_to_same_v(assertion,symbol_dict)  # 对疑似新结论的assertion作符号替换
-        if trans_assertion in assertions:# 不属于新定理
-            flag = False
-        else: #属于新定理,接下来提取证明步骤
-            flag = True
+def is_right_order(
+        # mm: mmverify.MM,
+        assertion: Assertion,   # 新断言
+        # proof: list,     # 得到当前断言的证明序列
+        symbol_dict: dict  # 读文件symbols.json之后产生的符号字典
+        ) -> bool:
+        """判断执行字符替换后assertion的conclusion中字符第一次出现的顺序是否符合symbol_dict"""
         
-        return trans_assertion, flag
-         
-
-# assersions,assertion_labels = read_axioms_json('axioms.json') # 获取已有公理的assertion list
-# symbol_dict = read_symbols_json('symbols.json')  #获取符号字典
+        symbols_labels = list(symbol_dict.keys())
+        symbols_v =  [item[1] for item in list(symbol_dict.values())]
+        ref_index = {char: index for index, char in enumerate(symbols_v)}
+        # print('symbols dict values:',list(symbol_dict.values()))
+        # print('symbols dict labels:',list(symbol_dict.keys()))
+        # print('symbols dict v:',symbols_v)
+        # print('ref index:',ref_index)
+        conclusion = assertion[3]
+        appeared = []
+        last_index = -1
+        #先获取从前往后第一次出现的变量
+        for ch in conclusion:
+            # print('current ch',ch)
+            if ch in ref_index and ch not in appeared:
+                    appeared.append(ch)  
+        for ch in appeared:
+            # print('current ch',ch)
+            if ref_index[ch] > last_index:
+                last_index = ref_index[ch]
+            else:
+                # print('order ERROR')
+                return False
+        # print('order True')
+        return True
+                 
+def add_new_assertion_to_assertions(
+          assertion: Assertion,
+          assertions: list[Assertion],
+          symbol_dict: dict  # 读文件symbols.json之后产生的符号字典
+          ) -> list[Assertion]:
+        """向已有的assertions 加入新的 assertion,(新的assertion 的 conclusion 中必须变量顺序正确"""
+        if is_right_order(assertion,symbol_dict):
+            assertions.append(assertion)
+            # print('Add success. Assertion:',assertion)
+        # else:
+            # print('Theorem conclusion has the wrong variable order, adding failed.')
+        return assertions
 
 def generate_theorem(node,name,assertion_labels):
   # print(node.path)
@@ -200,6 +254,14 @@ def generate_theorem(node,name,assertion_labels):
   f_hypos = [" ".join(pair) for pair in node.assersion[1]]
   e_hypos = [" ".join(pair) for pair in node.assersion[2]]
   conclusion = " ".join(node.assersion[3])
+  # conclusion = conclusion.replace('wff', '|-')
+  # with open("output_setall.json", 'r') as f:
+  #   for line in f:
+  #       # 解析 JSON 对象并添加到列表中
+  #       json_data = json.loads(line)
+  #       if (json_data["conclusion"] == conclusion):
+  #         name = json_data["theorem"]
+  #         break
   proof_steps = " ".join(node.path)
   for i in node.path:
     if i in assertion_labels:
@@ -215,23 +277,27 @@ def new_theorem(node, mm, assersions,assertion_labels,symbol_dict):
   if node.tac in assertion_labels:
     if(node.parent is None or node.flag == False):
       return False
-    elif(len(node.state) == 1 + len(node.parent.state)):
-      return False   #未生成新定理
+    # elif(len(node.state) == 1 + len(node.parent.state)):
+    #   return False   #未生成新定理
     else:
       # return True
       new_conclusion = node.state[-1]
       new_assersion = mm.fs.make_assertion(new_conclusion) # 获取疑似新结论的完整assertion
+      node.assersion = new_assersion
+      path = []
+      # trans_assersion, new_assertion_flag = is_new_assertion(new_assersion,assersions,symbol_dict)
       
-      trans_assersion, new_assertion_flag = is_new_assertion(new_assersion,assersions,symbol_dict)
-      node.assersion = trans_assersion
-      if not new_assertion_flag:# 不属于新定理
-          # print('It is not new theorem')
-          return False
-      else: #属于新定理,接下来提取证明步骤
-          # print('New theorem!')
-          assersions.append(trans_assersion)  #assertions数组添加新生成的assertion
-          # print('new assertion:',new_assersion)  
-          return True
+      trans_assertion,trans_proof = assertion_proof_trans_to_same_v(mm,new_assersion,path,symbol_dict)  #此处为了判断是否新定理
+
+      if trans_assertion in assersions:
+        # print('It is not new theorem')
+        return False
+      else:
+        assersions = add_new_assertion_to_assertions(trans_assertion,assersions,symbol_dict)
+        # assersions.append(trans_assertion)
+        # print('New theorem!')
+        return True
+        
   return False 
   
   
@@ -255,6 +321,7 @@ class Node(object):
     self.tactic_candidates = None    
     self.assersion = None
     self.depth = 0 
+    self.similarity = 0
 
   def set_state(self, state):
     self.state = state
@@ -292,7 +359,7 @@ class Node(object):
     Select action according to the visit count distribution and the temperature.
     """
     visit_counts = np.array([child.visit_times for child in self.children])
-    actions = [action for action in self.children.state.tac]
+    actions = [action for action in self.children.tac]
     action = actions[np.argmafx(visit_counts)]
     return action
 
@@ -304,10 +371,29 @@ class Node(object):
       return -1
     elif (self.flag == True):
       if(self.new == True):
+        # with open('output180.json', 'r') as file:
+        #   # 逐行读取 JSON 文件
+        #   for line in file:
+        #       # 解析 JSON 对象
+        #       json_object = json.loads(line)
+        #       conclusion = json_object['conclusion']
+        #       node_conclusion = " ".join(self.assersion[3])
+              
+        #       max_length = max(len(node_conclusion), len(conclusion))
+        #       encode_set = encode_state(conclusion,max_length)
+        #       encode_state = encode_state(node_conclusion,max_length)
+        #       vector_set = np.array(encode_set)
+        #       vector_state = np.array(encode_state)
+              
+        #       similarity = cosine_similarity(vector_set, vector_state)
+        #       if(similarity > self.similarity):
+        #         self.similarity = similarity
+        # return self.similarity
         return 1
       else:
         return 0
     
+  
   def proof(self, tac, mm, f_hyps, e_hyps):
     state = copy.copy(self.state)
     correct_flag, state = mm.verify_and_calculate_proof_step_normal(f_hyps,e_hyps,tac,state, 0)
@@ -315,14 +401,6 @@ class Node(object):
     return correct_flag, state
 
   def get_next_state_with_random_choice(self, index, mm, f_hyps, e_hyps,axiom_file,symbol_file):  ############# 根据当前state输入大模型，获取策略list后，随机选择其中一个策略，返回执行该随机策略后的状态
-    # if(self.state==[]):
-    #     self.tactic_candidates = tactic_generator()
-    # else:
-    #     self.tactic_candidates = self.parent.tactic_candidates
-    #     self.tactic_candidates.append("新定理")  
-    
-    # tactic_candidates = self.tactic_candidates
-    # random_choice = random.choices([choice for choice in tactic_candidates],k=1)
     
     self.tactic_candidates = tactic_generator(axiom_file,symbol_file)
     random_choice = self.tactic_candidates[index]
@@ -450,7 +528,7 @@ class MCTS:
           # C = 1
           # C = 2
         else:
-          C = 0.03
+          C = 0.01
 
         # UCB = quality / times + C * sqrt(2 * ln(total_times) / times)
         left = sub_node.get_quality_value() / sub_node.get_visit_times()
@@ -494,7 +572,7 @@ class MCTS:
       进行预测时，只需要根据Q值选择exploitation最大的节点即可，找到下一个最优的节点。
       """
       node =  self.node
-      computation_budget = 1000
+      computation_budget = 6000
       assersions,assertion_labels = read_axioms_json(axiom_file) # 获取已有公理的assertion list
       symbol_dict = read_symbols_json(symbol_file)  #获取符号字典
       
@@ -510,6 +588,20 @@ class MCTS:
           reward = -1
         elif(expand_node.new):
           reward = 1
+          path = []  #新定理所用策略
+          unused_list = expand_node.state[:-1]
+          new_node = copy.copy(expand_node)
+          while new_node.parent is not None:
+            if(new_node.state == unused_list):
+              break
+            path.append(new_node.tac)
+            new_node = new_node.parent
+          path.reverse()
+          trans_assertion,trans_proof = assertion_proof_trans_to_same_v(mm,expand_node.assersion,path,symbol_dict)
+          
+          expand_node.path = trans_proof
+          expand_node.assersion = trans_assertion
+          assersions = add_new_assertion_to_assertions(trans_assertion,assersions,symbol_dict)
         else:
           encodestate = encode_state(expand_node.state, self.args['feature_size'])
           input_value = torch.FloatTensor(np.array(encodestate).astype(np.float64))
@@ -518,45 +610,18 @@ class MCTS:
         # 3. Update all passing nodes with reward
         self.backup(expand_node, reward)
 
-        # if(expand_node.new): #生成了新定理
-        #   path = []  #新定理所用策略
-        #   unused_list = expand_node.state[:-1]
-        #   new_node = copy.copy(expand_node)
-        #   while new_node.parent is not None:
-        #     if(new_node.state == unused_list):
-        #       break
-        #     path.append(new_node.tac)
-        #     new_node = new_node.parent
-        #   path.reverse()
-        #   expand_node.path = path
-        #   # print("该定理策略为：")
-        #   # print(path)
-        #   print("#############################")
-        #   print("新定理为：")
-        #   new_theorem = generate_theorem(expand_node,name+str(i),assertion_labels)
-          
-        #   with open('out.json', 'a') as file:
-        #     json.dump(new_theorem, file)
-        #     file.write('\n')
-        #   print(new_theorem)
-          # path = []
-          # new_node = copy.copy(expand_node)
-          # while new_node.tac is not None:
-          #   path.append(new_node.tac)
-          #   new_node = new_node.parent
-          # path.reverse()
-          # # expand_node.path = path
-          # print("该定理策略为：")
-          # print(path)
       return node,len(tactic_generator(axiom_file,symbol_file))
 
 
     def runmcts(self, mm, f_hyps, e_hyps, axiom_file,symbol_file):
-     
+      count = 0
       node =  self.node
-      computation_budget = 10000
+      computation_budget = 1000000
       assersions,assertion_labels = read_axioms_json(axiom_file) # 获取已有公理的assertion list
+      
       symbol_dict = read_symbols_json(symbol_file)  #获取符号字典
+      
+      
       outputs = []
       
       # Run as much as possible under the computation budget
@@ -583,37 +648,34 @@ class MCTS:
           name = "new" + str(i)
           path = []  #新定理所用策略
           unused_list = expand_node.state[:-1]
+          
           new_node = copy.copy(expand_node)
-          while new_node.parent is not None:
-            if(new_node.state == unused_list):
+          trans_assertion,trans_proof = assertion_proof_trans_to_same_v(mm,expand_node.assersion,path,symbol_dict)
+          
+          if is_right_order(trans_assertion,symbol_dict):
+            while new_node.parent is not None:
+              if(new_node.state == unused_list):
+                break
+              path.append(new_node.tac)
+              new_node = new_node.parent
+            path.reverse()
+            
+            trans_assertion,trans_proof = assertion_proof_trans_to_same_v(mm,expand_node.assersion,path,symbol_dict)
+            expand_node.path = trans_proof
+            expand_node.assersion = trans_assertion
+            # assersions = add_new_assertion_to_assertions(trans_assertion,assersions,symbol_dict)
+          
+            new_theorem = generate_theorem(expand_node,name+str(i),assertion_labels)
+            # print('new_theorem:',new_theorem)
+
+            outputs.append(new_theorem)
+
+            with open('out.json', 'a') as file:
+              json.dump(new_theorem, file)
+              file.write('\n')                      
+            count += 1
+            if(count>=40):
               break
-            path.append(new_node.tac)
-            new_node = new_node.parent
-          path.reverse()
-          expand_node.path = path
-          
-          new_theorem = generate_theorem(expand_node,name+str(i),assertion_labels)
-          outputs.append(new_theorem)
-          
-          # # print(new_theorem)
-          # with open('out.json', 'a') as file:
-          #   json.dump(new_theorem, file)
-          #   file.write('\n')
-          # print(new_theorem)
           
       return outputs
 
-
-
-# def main():
-#   # Create the initialized state and initialized node
-#   init_state = State(state)
-#   node = Node()
-#   node.set_state(init_state)
-#   current_node = node
-#   mcts = MCTS(current_node)
-#   current_node = mcts.run()
-#   print("搜索完成")
-
-# if __name__ == "__main__":
-#   main()

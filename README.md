@@ -11,7 +11,7 @@ axioms和symbols运行时是已知的，把生成的定理添加到outputs中即
 ## 部署命令：
 
 ### 进入scripts目录下
-```cd ~/icml-deplpy/scripts```
+```cd ~/icml-deploy/scripts```
 ### 运行部署脚本
 ```bash setup.sh```
 
